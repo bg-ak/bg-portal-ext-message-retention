@@ -1,0 +1,8 @@
+set root=$system.Util.GetEnviron("BG_RETENTION_TESTS")
+set sc=$system.OBJ.LoadDir(root_"/demo","ck",,1) if $system.Status.IsError(sc) { do $system.Status.DisplayError(sc) halt }
+set sc=$system.OBJ.LoadDir(root_"/cls","ck",,1) if $system.Status.IsError(sc) { do $system.Status.DisplayError(sc) halt }
+set ^BG.RetentionTests("allowFixtures")=1
+set sc=##class(BG.RetentionTests.Runner).Run() if $system.Status.IsError(sc) { do $system.Status.DisplayError(sc) }
+set sc=##class(BG.RetentionTests.Demo).Run() if $system.Status.IsError(sc) { do $system.Status.DisplayError(sc) }
+kill ^BG.RetentionTests("allowFixtures")
+halt

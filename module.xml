@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25">
+  <Document name="bg-portal-ext-message-retention.ZPM">
+    <Module>
+      <Name>bg-portal-ext-message-retention</Name>
+      <Version>0.1.0</Version>
+      <Description>Production message retention policies and read-only impact analysis for IRIS Portal.</Description>
+      <Packaging>module</Packaging>
+      <SourcesRoot>src</SourcesRoot>
+      <Dependencies>
+        <ModuleReference><Name>bg-portal-core</Name><Version>0.1.*</Version></ModuleReference>
+      </Dependencies>
+      <Resource Name="BG.Retention.PKG"/>
+      <!-- Required setup is checked by ZPM, not by the discovery hook. -->
+      <Invoke Class="BG.Retention.Setup" Method="Install" Phase="Activate" When="Before" CheckStatus="true"/>
+      <Invoke Class="Portal.Ext.Registry" Method="Sync" Phase="Activate" When="After" CheckStatus="true"/>
+      <Invoke Class="Portal.Ext.Registry" Method="Uninstall" Phase="Unconfigure" When="Before" CheckStatus="true">
+        <Arg>BG.Retention.Portal.Contribution</Arg><Arg>0</Arg>
+      </Invoke>
+    </Module>
+  </Document>
+</Export>

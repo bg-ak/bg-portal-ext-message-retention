@@ -1,0 +1,2 @@
+try { set sc=$system.OBJ.LoadDir($system.Util.GetEnviron("BG_RETENTION_DEMO"),"ck",,1) if $system.Status.IsError(sc) { do $system.Status.DisplayError(sc) } else { set sc=##class(BG.RetentionDemo.Seed).Run("DISPOSABLE DEMO") if $system.Status.IsError(sc) { do $system.Status.DisplayError(sc) } } } catch ex { write !,$system.Status.GetErrorText(ex.AsStatus()),! }
+halt

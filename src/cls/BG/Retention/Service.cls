@@ -58,6 +58,29 @@ ClassMethod Rules(target As %String) As %DynamicArray
     return rows
 }
 
+/// Observed types plus every saved policy, including types with no recent headers.
+/// Discovery is bounded; an unconfigured type has no implicit retention default.
+ClassMethod Catalog(target As %String, limit As %Integer = 1000) As %DynamicObject
+{
+    do ..Require()
+    set target=..Target(target), inventory=##class(BG.Retention.Source).Inventory(target,limit)
+    set rules=..Rules(target), rows=[]
+    for i=0:1:inventory.classes.%Size()-1 {
+        set name=inventory.classes.%Get(i)
+        set types(name)={"BodyClass":(name),"Mode":"","KeepFor":"","DisplayName":"","Reason":"","Revision":0}
+    }
+    for i=0:1:rules.%Size()-1 {
+        set rule=rules.%Get(i),types(rule.BodyClass)=rule
+    }
+    set name=""
+    for {
+        set name=$order(types(name))
+        quit:name=""
+        do rows.%Push(types(name))
+    }
+    return {"types":(rows),"headersInspected":(inventory.headersInspected),"truncated":(inventory.truncated)}
+}
+
 /// expectedRevision=0 creates only; otherwise an atomic compare-and-update prevents stale edits.
 /// Policy and its outcome audit commit together. A failed audit rolls the policy back.
 ClassMethod Save(target As %String, bodyClass As %String, mode As %String, amount As %String, expectedRevision As %String, displayName As %String = "", reason As %String = "") As %Status

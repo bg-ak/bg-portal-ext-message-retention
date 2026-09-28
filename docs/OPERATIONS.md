@@ -8,7 +8,9 @@ For installation and the optional demo, start with the [README](../README.md).
   elapsed days, 1–876,000 elapsed hours, or never. Unconfigured classes have no expiry
   in this planner. An optional display name and reason explain the business intent;
   the namespace and exact class remain the policy identity.
-- Discover body classes from up to 1,000 recent headers, or enter an exact class.
+- The type list automatically merges classes from up to 1,000 recent headers with
+  every saved rule, including rules with no recent headers. The screen marks
+  partial discovery. Enter an exact class if an older type is missing.
   Any persistent message class is accepted; it need not inherit `Ens.MessageBody`.
 - Preview an unsaved rule. The UI reads at most 500 age-matched headers, including
   session-status and shared-body caution flags. The domain API supports 1–1,000.
@@ -49,15 +51,18 @@ bodies, or takes credentials from the browser.
 ## Use with existing message metadata
 
 1. Load a production namespace for which you have the permissions above.
-2. Discover message types, or enter an actual persistent body class.
-3. Select days or never, then **Preview this rule**. Saving is not needed for what-if
-   analysis. Try 1 hour, 50 days and never; inspect the displayed cutoff and caution counts.
-4. Save the planning policy. Open it from the policy list and preview it again.
+2. In **Message types**, choose hours, days or **Never delete** in the type's row.
+   Unconfigured types have an empty rule. Add an exact class if it is not listed.
+3. Click the row's **Preview**. Saving is not needed for what-if analysis. The row
+   shows age-matched header counts; details below show cutoff and cautions.
+4. Click the row's **Save**. **Undo** restores its saved values. Changing a row
+   clears its previous count; saving another row preserves outstanding drafts.
 5. Disable the extension on Portal's Extensions screen. Navigation and its widget
    disappear; direct page and WebMethod access are also denied by this extension.
 6. Re-enable it. Its saved policies and history remain.
 
-Preview is deliberately on-demand. `TOP` limits returned candidates, not database
+Loading the type list reads the bounded recent-header inventory; it does not run
+age previews for each class. Preview is deliberately on-demand. `TOP` limits returned candidates, not database
 work: sorting and checking all other headers in a session/body reference set can be
 expensive. Start off-peak, inspect the query plan on your own data, and do not infer
 production performance from the tiny verification fixture. There is no automatic
@@ -72,6 +77,8 @@ The domain service has no dependency on Portal or Bloom:
 set sc = ##class(BG.Retention.Service).Save("MYPRODUCTION", "MyApp.Request", "days", 50, 0)
 // Revision 0 creates; subsequent updates must pass the currently read Revision.
 set rules = ##class(BG.Retention.Service).Rules("MYPRODUCTION")
+set catalog = ##class(BG.Retention.Service).Catalog("MYPRODUCTION")
+// catalog.types merges recent observed classes with saved rules; inspect catalog.truncated.
 set preview = ##class(BG.Retention.Service).Preview("MYPRODUCTION", "MyApp.Request", "days", 50, 500)
 write preview.%ToJSON()
 ```

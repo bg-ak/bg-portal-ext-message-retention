@@ -3,7 +3,7 @@ Class BG.Retention.Portal.Contribution Extends Portal.Ext.Contribution
 {
 Parameter ID = "io.github.bg-ak.portal.message-retention";
 Parameter NAME = "Production Message Retention";
-Parameter VERSION = "0.2.0";
+Parameter VERSION = "0.3.0";
 Parameter APIVERSION As INTEGER = 2;
 Parameter PUBLISHER = "Alexander Kolesov";
 Parameter ORDER As INTEGER = 300;

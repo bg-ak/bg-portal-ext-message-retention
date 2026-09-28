@@ -21,15 +21,21 @@ Ordinary ZPM installation does not import demo or test classes.
 | Tow-truck GPS positions | 10 minutes, 2 hours, 6 hours | 1 hour | Keep the recent position; two are past retention |
 | Towing status updates | 2, 60 and 400 days | 50 days | Keep the recent job update; two are past retention |
 
-The policies show a name, exact body class and business reason. The demo table
-shows actual synthetic contents: invoice numbers and amounts, vehicle coordinates,
-and job status descriptions. Each row includes age, retention and result.
+The first screen is a **Message types** table. Each row has the exact body class,
+its business label/reason, an editable **Keep for** value, and **Save / Preview**
+actions. Accounting is set to **Never delete**, GPS to **1 Hours**, and towing
+updates to **50 Days**.
 
-For an interactive example, edit **Tow-truck GPS positions**, change **Hours** to
-**3**, and preview. Only the 6-hour position now matches. Save the change, then click
-**Refresh saved policies** in the demo table: the 2-hour position becomes **Within
-retention**. The result comes from saved policy data and message timestamps, not
-from hard-coded colored rows. Restore 1 hour to return to the initial scenario.
+Change the GPS amount to **3** directly in its row and click **Preview**: only the
+6-hour position matches. **Save** persists that type's rule. **Undo** restores its
+saved value; saving or undoing one row leaves other drafts alone.
+
+The individual messages are behind **Example messages (optional demonstration)**.
+Expand it and click **Refresh saved policies** after saving GPS at 3 hours: the
+2-hour position becomes **Within retention**. These outcomes use actual saved
+rules and timestamps. Restore GPS to 1 hour for the original scenario.
+
+![Retention controls for each message type](../docs/message-types.png)
 
 Messages age in real time. After 50 minutes, the initially recent GPS position will
 also be over an hour old. Refresh to recalculate. No messages are deleted, including

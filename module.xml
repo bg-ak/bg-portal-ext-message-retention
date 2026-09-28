@@ -3,7 +3,7 @@
   <Document name="bg-portal-ext-message-retention.ZPM">
     <Module>
       <Name>bg-portal-ext-message-retention</Name>
-      <Version>0.2.0</Version>
+      <Version>0.3.0</Version>
       <Description>Production message retention policies and read-only impact analysis for IRIS Portal.</Description>
       <Packaging>module</Packaging>
       <SourcesRoot>src</SourcesRoot>

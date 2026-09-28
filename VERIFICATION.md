@@ -1,4 +1,27 @@
-# Verification — version 0.2.0, 2026-09-28
+# Verification — version 0.3.0, 2026-09-28
+
+Same disposable IRIS/Portal runtime as 0.2.0 below. Portal core is unchanged.
+
+| Check | Result |
+| --- | --- |
+| Package upgrade | IPM load, compile and activation passed; existing demo data and three policies retained |
+| Catalog suite | **11 native checks passed** with transactional rollback alongside the existing demo |
+| Catalog semantics | Observed and saved-only types merge without duplicates; unconfigured types have no default period; discovery remains bounded and does not run previews or save rules |
+| Limited-editor browser | Edited GPS to 3 hours directly in the type row, saved and previewed one match |
+| Independent drafts | A separate unsaved 365-day towing edit survived saving GPS; Undo restored only towing to 50 days |
+| New type | Added a class with no rule; choosing days left the amount empty; server rejected saving an empty amount |
+| Restore and reload | GPS restored to 1 hour; Reload types retained three saved rules and removed the unsaved added type |
+| Row previews | GPS 1 hour and towing 50 days each showed two older headers; screenshot in `docs/message-types.png` |
+
+The existing 62 domain/hour/demo checks were passed in 0.2.0 and were not rerun on
+this populated demo store. The complete empty-store runner now includes the 11 new
+catalog checks (73 total). This change was verified with the focused catalog suite
+and browser scenarios above. No cleanup executor, scheduler, grants or core changes
+were added.
+
+## Earlier 0.2.0 verification
+
+### Version 0.2.0, 2026-09-28
 
 Runtime remains IRIS 2026.1 build 234U (ARM64), IPM 0.10.9, and unchanged Portal
 commit `1842205d2c200ab1d64b94b44dc4b7ef2394b2e4` in a disposable local instance.

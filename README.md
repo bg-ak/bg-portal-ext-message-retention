@@ -7,12 +7,16 @@ headers inside Portal's own navigation, page layout and dashboard.
 A practical companion to Portal's extension model: its own repository, ZPM package,
 domain service and data, with **no changes to Portal core or frontend**.
 
-**Version 0.2.0 plans retention; it does not delete messages or schedule cleanup.**
+**Version 0.3.0 plans retention; it does not delete messages or schedule cleanup.**
 “Never expire” records an intention and does not override existing IRIS purge jobs.
 The [engineering assessment](DESIGN.md) explains the integrity constraints and why
 deletion needs a separate design.
 
-![Accounting, GPS and towing messages with different retention periods](docs/preview.png)
+The main screen is a **list of message types with editable retention in each row**:
+choose hours, days or **Never delete**, then save that type. Preview reports how
+many headers are older than the value shown. Message examples are secondary.
+
+![Configure the retention period directly beside each message type](docs/message-types.png)
 
 ## Add it to an existing Portal
 
@@ -77,16 +81,26 @@ The seed creates **nine actual synthetic messages** and three named policies:
 | Tow-truck GPS positions | 1 hour | A recent position stays; 2-hour and 6-hour positions are past retention |
 | Towing status updates | 50 days | A 2-day-old update stays; 60-day and 400-day updates are past retention |
 
-1. Open **Message retention**. Read the policy names and **Why keep it this long?**
-2. Below them, **Demo messages · a towing operation** shows each message's content,
-   age, saved retention rule and result. The examples include invoices, payments,
-   vehicle coordinates and towing-job updates, not just technical header IDs.
-3. Open **Edit / preview** for **Tow-truck GPS positions**. Change **Hours** from
-   **1** to **3**, then preview: only the 6-hour position matches instead of two.
-4. Save the change, then click **Refresh saved policies** in the demo table. The
-   2-hour position changes from **Past retention** to **Within retention**.
-5. Return GPS to **1 hour** if you want to restore the initial demonstration.
-   Accounting documents still have no age expiry regardless of their age.
+1. Open **Message retention**. The **Message types** table already shows the three
+   types and their editable retention rules. No discovery button or separate editor
+   is needed.
+2. In the **Tow-truck GPS positions** row, change **1 Hours** to **3 Hours** and
+   click that row's **Preview**. **Past retention** now shows one header instead
+   of two; the details below explain the cutoff and integrity cautions.
+3. Click **Save** in the same row. Each type is saved independently. **Undo**
+   restores that row's saved rule; edits in other rows are preserved.
+4. Set **Towing status updates** to **365 Days**, or select **Never delete** for
+   a type. Preview works before saving. Restore GPS to **1 Hours** and towing to
+   **50 Days** to return to the initial demonstration.
+5. Expand **Example messages (optional demonstration)** only if you want to
+   inspect individual synthetic messages. **Refresh saved policies** recalculates
+   their outcomes from the rules saved above.
+
+Types are discovered from up to 1,000 recent headers and merged with all saved
+policies, including types with no recent messages. The screen explicitly marks a
+partial inventory; **Type missing? Add an exact body class** supports older types.
+Newly discovered types start with **No rule configured**, not a suggested expiry.
+Preview scans run only when requested, and changes invalidate their previous count.
 
 Counts above apply soon after seeding. Ages advance with real time. “Past retention”
 is an age result, not authorization to delete. The normal preview still checks
@@ -108,7 +122,8 @@ sh tests/run.sh YOUR_DISPOSABLE_CONTAINER --disposable
 ```
 
 Expected: `RETENTION TESTS PASSED: 34`, `RETENTION HOUR TESTS PASSED: 13`,
-and `RETENTION DEMO TESTS PASSED: 15` (62 checks). All three suites roll back their fixture data. The wrapper requires explicit success
+`RETENTION DEMO TESTS PASSED: 15`, and `RETENTION CATALOG TESTS PASSED: 11`
+(73 checks in the complete suite). All four suites roll back their fixture data. The wrapper requires explicit success
 markers as well as a successful process exit. See the
 [verification record](VERIFICATION.md) and [limited-user probes](tests/SECURITY.md).
 

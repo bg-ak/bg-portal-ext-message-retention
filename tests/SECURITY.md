@@ -1,8 +1,15 @@
 # Limited-user verification
 
 Run only on a fresh disposable instance with the extension and test classes loaded.
-Seed `Fixture.Seed()` as described in the package README. These probes need the
-seven synthetic headers; the ordinary runner rolls its fixtures back.
+First run `sh tests/run.sh YOUR_CONTAINER --disposable` to load the test classes
+and verify that its fixtures roll back. These probes use the separate seven-header
+technical fixture, not the nine-message business demo. In a fresh empty store:
+
+```objectscript
+set ^BG.RetentionTests("allowFixtures")=1
+do ##class(BG.RetentionTests.Fixture).Seed()
+kill ^BG.RetentionTests("allowFixtures")
+```
 
 Create dedicated viewer/editor roles and users in `%SYS`, using your throwaway test
 password. No existing users, CSPSystem permissions or password policies need to

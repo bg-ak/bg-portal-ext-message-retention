@@ -20,35 +20,39 @@ ClassMethod Target(target As %String) As %String
     return target
 }
 
-ClassMethod Validate(bodyClass As %String, mode As %String, days As %String)
+ClassMethod Validate(bodyClass As %String, mode As %String, amount As %String)
 {
     if (bodyClass="") || ($length(bodyClass)>220) {
         throw ##class(%Exception.General).%New("An exact message body class is required")
     }
-    if (mode'="days") && (mode'="never") {
-        throw ##class(%Exception.General).%New("Retention must be days or never")
+    if (mode'="days") && (mode'="hours") && (mode'="never") {
+        throw ##class(%Exception.General).%New("Retention must be hours, days or never")
     }
-    if mode="days" {
-        if (days'?1.N) || (+days<1) || (+days>36500) {
-            throw ##class(%Exception.General).%New("Days must be an integer from 1 to 36500")
+    if mode'="never" {
+        set max=$select(mode="hours":876000,1:36500)
+        if (amount'?1.N) || (+amount<1) || (+amount>max) {
+            throw ##class(%Exception.General).%New("Retention must be an integer from 1 to "_max_" "_mode)
         }
     }
 }
 
-/// N elapsed 24-hour days, UTC. Deliberately not IRIS purge's local calendar-day rule.
-ClassMethod Cutoff(asOf As %String, days As %Integer) As %String
+/// Elapsed time in UTC; the default retains the original two-argument day API.
+ClassMethod Cutoff(asOf As %String, amount As %Integer, unit As %String = "days") As %String
 {
+    do ..Validate("cutoff",unit,amount)
+    if unit="never" { return "" }
     set utc = $zdatetimeh(asOf, 3)
-    return $zdatetime(($piece(utc,",")-days)_","_$piece(utc,",",2), 3, 1)
+    set seconds=($piece(utc,",")*86400)+$piece(utc,",",2)-(amount*$select(unit="hours":3600,1:86400))
+    return $zdatetime((seconds\86400)_","_(seconds#86400),3,1)
 }
 
 ClassMethod Rules(target As %String) As %DynamicArray
 {
     do ..Require()
     set target = ..Target(target), rows = []
-    set rs = ##class(%SQL.Statement).%ExecDirect(, "SELECT BodyClass, Mode, KeepDays, Revision, UpdatedAt, UpdatedBy FROM BG_Retention.Rule WHERE TargetNamespace=? ORDER BY BodyClass", target)
+    set rs = ##class(%SQL.Statement).%ExecDirect(, "SELECT BodyClass, Mode, KeepDays, KeepHours, DisplayName, Reason, Revision, UpdatedAt, UpdatedBy FROM BG_Retention.Rule WHERE TargetNamespace=? ORDER BY BodyClass", target)
     while rs.%Next() {
-        do rows.%Push({"BodyClass": (rs.%Get("BodyClass")), "Mode": (rs.%Get("Mode")), "KeepDays": (rs.%Get("KeepDays")), "Revision": (rs.%Get("Revision")), "UpdatedAt": (rs.%Get("UpdatedAt")), "UpdatedBy": (rs.%Get("UpdatedBy"))})
+        do rows.%Push({"BodyClass": (rs.%Get("BodyClass")), "Mode": (rs.%Get("Mode")), "KeepDays": (rs.%Get("KeepDays")), "KeepHours": (rs.%Get("KeepHours")), "KeepFor": ($select(rs.%Get("Mode")="hours":rs.%Get("KeepHours"),1:rs.%Get("KeepDays"))), "DisplayName": (rs.%Get("DisplayName")), "Reason": (rs.%Get("Reason")), "Revision": (rs.%Get("Revision")), "UpdatedAt": (rs.%Get("UpdatedAt")), "UpdatedBy": (rs.%Get("UpdatedBy"))})
     }
     if rs.%SQLCODE<0 { throw ##class(%Exception.General).%New(rs.%Message) }
     return rows
@@ -56,27 +60,28 @@ ClassMethod Rules(target As %String) As %DynamicArray
 
 /// expectedRevision=0 creates only; otherwise an atomic compare-and-update prevents stale edits.
 /// Policy and its outcome audit commit together. A failed audit rolls the policy back.
-ClassMethod Save(target As %String, bodyClass As %String, mode As %String, days As %String, expectedRevision As %String) As %Status
+ClassMethod Save(target As %String, bodyClass As %String, mode As %String, amount As %String, expectedRevision As %String, displayName As %String = "", reason As %String = "") As %Status
 {
     set level = $tlevel
     try {
         do ..Require(1)
         set target = ..Target(target)
-        do ..Validate(bodyClass, mode, days)
+        do ..Validate(bodyClass, mode, amount)
+        if ($length(displayName)>120)||($length(reason)>300) { throw ##class(%Exception.General).%New("Name is limited to 120 characters and reason to 300") }
         if expectedRevision'?1.N { throw ##class(%Exception.General).%New("Invalid policy revision") }
         set info = ##class(BG.Retention.Source).ClassInfo(target, bodyClass)
         if 'info.persistent { throw ##class(%Exception.General).%New("Body class must exist and be persistent in the target namespace") }
-        set days = $select(mode="never":"",1:+days), now = $zdatetime($ztimestamp,3,1)
+        set days=$select(mode="days":+amount,1:""),hours=$select(mode="hours":+amount,1:""),now=$zdatetime($ztimestamp,3,1)
         tstart
         if expectedRevision=0 {
-            set rs = ##class(%SQL.Statement).%ExecDirect(, "INSERT INTO BG_Retention.Rule (TargetNamespace,BodyClass,Mode,KeepDays,Revision,UpdatedAt,UpdatedBy) VALUES (?,?,?,?,1,?,?)", target, bodyClass, mode, days, now, $username)
+            set rs = ##class(%SQL.Statement).%ExecDirect(, "INSERT INTO BG_Retention.Rule (TargetNamespace,BodyClass,Mode,KeepDays,KeepHours,DisplayName,Reason,Revision,UpdatedAt,UpdatedBy) VALUES (?,?,?,?,?,?,?,1,?,?)", target, bodyClass, mode, days, hours, displayName, reason, now, $username)
         } else {
-            set rs = ##class(%SQL.Statement).%ExecDirect(, "UPDATE BG_Retention.Rule SET Mode=?,KeepDays=?,Revision=Revision+1,UpdatedAt=?,UpdatedBy=? WHERE TargetNamespace=? AND BodyClass=? AND Revision=?", mode, days, now, $username, target, bodyClass, expectedRevision)
+            set rs = ##class(%SQL.Statement).%ExecDirect(, "UPDATE BG_Retention.Rule SET Mode=?,KeepDays=?,KeepHours=?,DisplayName=?,Reason=?,Revision=Revision+1,UpdatedAt=?,UpdatedBy=? WHERE TargetNamespace=? AND BodyClass=? AND Revision=?", mode, days, hours, displayName, reason, now, $username, target, bodyClass, expectedRevision)
         }
         if (rs.%SQLCODE<0) || (rs.%ROWCOUNT'=1) {
             throw ##class(%Exception.General).%New("Policy was not saved. Reload before editing; it may have changed in another session. "_rs.%Message)
         }
-        do ..Record("policy.saved", target, bodyClass, {"mode": (mode), "keepDays": (days), "previousRevision": (+expectedRevision), "revision": (expectedRevision+1)})
+        do ..Record("policy.saved", target, bodyClass, {"mode": (mode), "keepDays": (days), "keepHours": (hours), "displayName": (displayName), "reason": (reason), "previousRevision": (+expectedRevision), "revision": (expectedRevision+1)})
         tcommit
         return $$$OK
     } catch ex {
@@ -85,28 +90,30 @@ ClassMethod Save(target As %String, bodyClass As %String, mode As %String, days 
     }
 }
 
-ClassMethod Preview(target As %String, bodyClass As %String, mode As %String, days As %String, limit As %String = 500) As %DynamicObject
+ClassMethod Preview(target As %String, bodyClass As %String, mode As %String, amount As %String, limit As %String = 500) As %DynamicObject
 {
     do ..Require()
     set target = ..Target(target)
-    do ..Validate(bodyClass, mode, days)
+    do ..Validate(bodyClass, mode, amount)
     if (limit'?1.N) || (+limit<1) || (+limit>1000) { throw ##class(%Exception.General).%New("Preview limit must be from 1 to 1000") }
     set now = $zdatetime($ztimestamp,3,1), info = ##class(BG.Retention.Source).ClassInfo(target, bodyClass)
     set result = {"rows": [], "matched": 0, "truncated": false, "sessionBlocked": 0, "sharedBody": 0, "missingBodyId": 0}
     set cutoff = ""
-    if mode="days" {
-        set cutoff = ..Cutoff(now, days)
+    if mode'="never" {
+        set cutoff = ..Cutoff(now, amount, mode)
         set result = ##class(BG.Retention.Source).Scan(target, bodyClass, cutoff, limit)
     }
     do result.%Set("namespace", target)
     do result.%Set("bodyClass", bodyClass)
     do result.%Set("mode", mode)
-    do result.%Set("keepDays", $select(mode="never":"",1:+days))
+    do result.%Set("keepDays", $select(mode="days":+amount,1:""))
+    do result.%Set("keepHours", $select(mode="hours":+amount,1:""))
+    do result.%Set("keepFor", $select(mode="never":"",1:+amount))
     do result.%Set("asOfUTC", now)
     do result.%Set("cutoffUTC", cutoff)
     do result.%Set("classInfo", info)
     do result.%Set("executable", 0, "boolean")
-    do ..Record("preview.completed", target, bodyClass, {"mode": (mode), "keepDays": (result.keepDays), "cutoffUTC": (cutoff), "limit": (+limit), "matched": (result.matched), "truncated": (result.truncated), "sessionBlocked": (result.sessionBlocked), "sharedBody": (result.sharedBody), "purgeProtected": (info.purgeProtected)})
+    do ..Record("preview.completed", target, bodyClass, {"mode": (mode), "keepDays": (result.keepDays), "keepHours": (result.keepHours), "cutoffUTC": (cutoff), "limit": (+limit), "matched": (result.matched), "truncated": (result.truncated), "sessionBlocked": (result.sessionBlocked), "sharedBody": (result.sharedBody), "purgeProtected": (info.purgeProtected)})
     return result
 }
 

@@ -14,3 +14,4 @@ output=$(docker exec -i -e BG_RETENTION_TESTS="$remote" "$container" iris sessio
 printf '%s\n' "$output"
 printf '%s\n' "$output" | grep -q '^RETENTION TESTS PASSED: '
 printf '%s\n' "$output" | grep -q '^RETENTION DEMO TESTS PASSED: '
+printf '%s\n' "$output" | grep -q '^RETENTION HOUR TESTS PASSED: '

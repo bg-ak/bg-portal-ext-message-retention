@@ -1,4 +1,31 @@
-# Verification record — 2026-09-28
+# Verification — version 0.2.0, 2026-09-28
+
+Runtime remains IRIS 2026.1 build 234U (ARM64), IPM 0.10.9, and unchanged Portal
+commit `1842205d2c200ab1d64b94b44dc4b7ef2394b2e4` in a disposable local instance.
+
+| Check | Result |
+| --- | --- |
+| Upgrade from 0.1.0 | IPM load/compile/activation passed; existing 50-day rule, revision and seven fixture headers preserved |
+| Original domain/lifecycle suite | 34 checks passed |
+| Hourly policy suite | 13 checks passed: UTC year/leap-day rollover, strict cutoff, validation, unit changes, metadata and old payload compatibility |
+| Business demo suite | 15 checks passed: nine messages, three policies, actual body summaries, expiry decisions, what-if values, saved-policy refresh and refusal paths |
+| Seed helper | Created nine persistent synthetic bodies/headers and three named policies in USER |
+| Limited-editor browser walkthrough | Showed the complete business dataset; changed GPS from 1 to 3 hours, previewed one match, saved, refreshed and observed the 2-hour position become within retention |
+| Restore and screenshot | Restored the 1-hour GPS policy and captured all nine messages in `docs/preview.png` |
+| Existing security setup | Browser used the existing limited editor and existing permissions; no new roles, grants or CSP applications were needed |
+
+The suites total **62 checks**. Test data is rolled back; tests tolerate pre-existing
+audit history and verify newly appended records by count difference. The screenshot
+now uses the business demo itself, not the older technical integrity fixture.
+The demo's displayed outcomes derive from saved policies and real header timestamps.
+No deletion executor or scheduler was introduced. Native selection and UI behavior
+are verified locally; production performance and destructive cleanup are not.
+
+## Earlier 0.1.0 verification
+
+The following record describes the original baseline, including security and
+uninstall/reinstall checks. Those specific scenarios were not all repeated in 0.2.0.
+
 
 ## Pinned baseline
 

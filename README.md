@@ -7,12 +7,12 @@ headers inside Portal's own navigation, page layout and dashboard.
 A practical companion to Portal's extension model: its own repository, ZPM package,
 domain service and data, with **no changes to Portal core or frontend**.
 
-**Version 0.1.0 plans retention; it does not delete messages or schedule cleanup.**
+**Version 0.2.0 plans retention; it does not delete messages or schedule cleanup.**
 “Never expire” records an intention and does not override existing IRIS purge jobs.
 The [engineering assessment](DESIGN.md) explains the integrity constraints and why
 deletion needs a separate design.
 
-![Read-only preview on synthetic verification messages](docs/preview.png)
+![Accounting, GPS and towing messages with different retention periods](docs/preview.png)
 
 ## Add it to an existing Portal
 
@@ -69,30 +69,33 @@ sh demo/seed.sh YOUR_PORTAL_CONTAINER --disposable
 ```
 
 For a non-default namespace, append its name after `--disposable`.
-The seed creates 19 synthetic headers and their bodies plus four policies:
+The seed creates **nine actual synthetic messages** and three named policies:
 
-| Message body class | Retention | What it illustrates |
+| Message type | Retention | Example |
 | --- | --- | --- |
-| `BG.RetentionDemo.Trace` | 1 day | Short-lived diagnostic messages |
-| `BG.RetentionDemo.Order` | 50 days | Shared bodies and incomplete sessions |
-| `BG.RetentionDemo.Receipt` | 365 days | Longer retention |
-| `BG.RetentionDemo.Archive` | Never | No age expiry; separate `ENSPURGE=0` warning |
+| Accounting documents | Keep indefinitely | A 400-day-old invoice remains in the keep category |
+| Tow-truck GPS positions | 1 hour | A recent position stays; 2-hour and 6-hour positions are past retention |
+| Towing status updates | 50 days | A 2-day-old update stays; 60-day and 400-day updates are past retention |
 
-1. Open **Message retention**, then open the `BG.RetentionDemo.Order` policy.
-2. Click **Preview this rule**. Expect **3 age-matched headers**, **2 incomplete /
-   unknown session flags**, and **1 shared-body flag**.
-3. Change days to **1** and preview: expect **4** headers. Change to **365**:
-   expect **1**. These are what-if previews; saving is optional.
-4. Open **Archive** and preview: no age expiry and no scan. Its `ENSPURGE=0`
-   warning explains that native body protection does not preserve the headers.
-5. Save a policy change and inspect **Recent activity**. Messages remain intact.
+1. Open **Message retention**. Read the policy names and **Why keep it this long?**
+2. Below them, **Demo messages · a towing operation** shows each message's content,
+   age, saved retention rule and result. The examples include invoices, payments,
+   vehicle coordinates and towing-job updates, not just technical header IDs.
+3. Open **Edit / preview** for **Tow-truck GPS positions**. Change **Hours** from
+   **1** to **3**, then preview: only the 6-hour position matches instead of two.
+4. Save the change, then click **Refresh saved policies** in the demo table. The
+   2-hour position changes from **Past retention** to **Within retention**.
+5. Return GPS to **1 hour** if you want to restore the initial demonstration.
+   Accounting documents still have no age expiry regardless of their age.
 
-Counts above apply immediately after seeding. Flags can overlap; they are not a
-count of messages proven safe to delete. Days are elapsed 24-hour periods in UTC.
+Counts above apply soon after seeding. Ages advance with real time. “Past retention”
+is an age result, not authorization to delete. The normal preview still checks
+session and shared-body cautions. An hour is 60 minutes; a day is 24 hours, in UTC.
 
-The seed refuses occupied namespaces and repeated runs, and commits its data and
-policies together. It does not run a production, create users or delete anything.
-For server-side commands, demo resets and a lifecycle walkthrough, see
+The optional demo component reads only its tracked synthetic message bodies. The
+main extension's production analysis remains header-only. The seed refuses occupied
+namespaces and repeated runs, and commits its messages and policies together.
+For server-side commands, demo resets and lifecycle checks, see
 [the demo guide](demo/README.md).
 
 ## Verify
@@ -104,8 +107,8 @@ installed and an empty header/policy store:
 sh tests/run.sh YOUR_DISPOSABLE_CONTAINER --disposable
 ```
 
-Expected: `RETENTION TESTS PASSED: 34` and `RETENTION DEMO TESTS PASSED: 11`.
-Both suites roll back their fixture data. The wrapper requires explicit success
+Expected: `RETENTION TESTS PASSED: 34`, `RETENTION HOUR TESTS PASSED: 13`,
+and `RETENTION DEMO TESTS PASSED: 15` (62 checks). All three suites roll back their fixture data. The wrapper requires explicit success
 markers as well as a successful process exit. See the
 [verification record](VERIFICATION.md) and [limited-user probes](tests/SECURITY.md).
 
@@ -114,7 +117,7 @@ markers as well as a successful process exit. See the
 - `src/cls/BG/Retention/`: policies, audit history and IRIS header analysis.
 - `src/cls/BG/Retention/Portal/`: native page, navigation, widget and lifecycle guard.
 - `module.xml`: independently installable package; depends on `bg-portal-core`.
-- `demo/`: optional synthetic data, outside the installed package.
+- `demo/`: optional synthetic bodies, seed and a Portal widget contribution, outside the installed package.
 - `tests/`: executable domain, lifecycle and demo checks.
 
 The domain service does not depend on Portal or Bloom. Read the

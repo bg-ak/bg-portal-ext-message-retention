@@ -5,7 +5,9 @@ For installation and the optional demo, start with the [README](../README.md).
 ## What you can do
 
 - Store one policy per target namespace and exact `MessageBodyClassName`: 1–36,500
-  elapsed days, or never. Unconfigured classes have no expiry in this planner.
+  elapsed days, 1–876,000 elapsed hours, or never. Unconfigured classes have no expiry
+  in this planner. An optional display name and reason explain the business intent;
+  the namespace and exact class remain the policy identity.
 - Discover body classes from up to 1,000 recent headers, or enter an exact class.
   Any persistent message class is accepted; it need not inherit `Ens.MessageBody`.
 - Preview an unsaved rule. The UI reads at most 500 age-matched headers, including
@@ -15,8 +17,8 @@ For installation and the optional demo, start with the [README](../README.md).
 - See successful policy changes and completed previews in extension-owned history.
   Stale policy edits fail rather than silently overwriting a newer revision.
 
-The timestamp basis is `Ens.MessageHeader.TimeCreated`, in UTC. A day means 24
-hours and the cutoff is exclusive. This intentionally differs from the built-in
+The timestamp basis is `Ens.MessageHeader.TimeCreated`, in UTC. An hour means 60 minutes, a day means 24
+hours, and the cutoff is exclusive. This intentionally differs from the built-in
 purge's local calendar-day calculation. Counts are **headers**, not distinct bodies,
 sessions, bytes reclaimable, or messages proven safe to delete. A running production
 can change the data during or after a scan.
@@ -49,7 +51,7 @@ bodies, or takes credentials from the browser.
 1. Load a production namespace for which you have the permissions above.
 2. Discover message types, or enter an actual persistent body class.
 3. Select days or never, then **Preview this rule**. Saving is not needed for what-if
-   analysis. Try 1, 50 and 365 days; inspect the displayed cutoff and caution counts.
+   analysis. Try 1 hour, 50 days and never; inspect the displayed cutoff and caution counts.
 4. Save the planning policy. Open it from the policy list and preview it again.
 5. Disable the extension on Portal's Extensions screen. Navigation and its widget
    disappear; direct page and WebMethod access are also denied by this extension.
@@ -97,6 +99,18 @@ for these table privileges. No tasks are created, so there is no scheduler to st
 Audit is ordinary application history, not a tamper-proof compliance log. Failed
 requests are returned to the caller; only successful policy changes and completed
 previews are recorded here. No message bodies or header IDs are stored in audit.
+
+## Upgrading from 0.1.0
+
+Load the new package in the same namespace. Existing daily rules remain in
+`KeepDays` and retain their revisions. Hourly rules use the new `KeepHours` column;
+`Rules()` exposes a normalized `KeepFor` amount. Existing positional `Save()` and
+`Preview()` calls with mode `days` remain valid. Use mode `hours` and an integer
+amount for hours. `Save()` also accepts optional display name and reason arguments.
+The old day-only WebMethod payload remains accepted. No purge job is changed.
+
+The optional demo dataset changed in 0.2.0. Its seed does not replace older demo
+data; use a fresh disposable instance for the new demonstration.
 
 ## Before adding an executor
 

@@ -25,7 +25,7 @@ Read the installed 2026.1 build 234U definitions of `Ens.Util.MessagePurge`,
 | Installed purge handles body deletion, search-table cleanup, header callbacks and bitmap maintenance. | A SQL DELETE or a loop over `%DeleteId` would not be an equivalent safe executor. |
 | `ENSPURGE=0` prevents body purge, but headers can still be removed. | Surface it as a warning; never equate it with a “retain message forever” policy. |
 | Multiple headers can reference one body; object/stream lifecycle may go beyond the body row. | Report any other header reference, even one outside this rule's time window. Do not estimate deleted bodies or reclaimed bytes. |
-| The built-in day count uses a local calendar boundary; `TimeCreated` is UTC. | This planner states its own elapsed-day UTC rule and exact exclusive cutoff. It does not claim parity with a stock purge dry run. |
+| The built-in day count uses a local calendar boundary; `TimeCreated` is UTC. | This planner states its own elapsed-hour/day UTC rule and exact exclusive cutoff. It does not claim parity with a stock purge dry run. |
 
 Primary references:
 
@@ -54,6 +54,23 @@ extra row distinguishes a complete result from a lower bound. Shared-reference a
 session checks intentionally inspect outside the age/class selection. There is no
 “eligible” or “safe to delete” count. The result is an observation, not a durable
 candidate list that could safely be executed later.
+
+## Business-readable demonstration (0.2.0)
+
+Policies can carry a display name and retention reason; matching still uses the
+exact body class and namespace. Hourly retention supports short-lived telemetry
+without fractional-day rounding. Existing `KeepDays` storage and positional day
+API calls remain compatible; hours use a separate field.
+
+The optional `BG.RetentionDemo` contribution fills the extension page's `examples`
+widget slot. Its nine messages have real persistent bodies and headers: accounting
+documents, tow-truck GPS positions and towing status updates. The widget reads only
+tracked headers with those three exact synthetic body classes, and derives results
+from saved policies and actual timestamps. It never reads arbitrary production
+bodies. The main domain/source package has no dependency on demo classes.
+
+This keeps business examples out of Portal core and out of the installed retention
+package, while making the relationship between message content and policy visible.
 
 ## Portal findings at 1842205
 

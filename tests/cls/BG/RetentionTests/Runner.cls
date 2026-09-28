@@ -13,6 +13,7 @@ ClassMethod Run() As %Status
     set level=$tlevel
     try {
         if $get(^BG.RetentionTests("allowFixtures"))'=1 { throw ##class(%Exception.General).%New("Use disposable-instance test instructions") }
+        set auditBefore=..AuditCount()
         tstart
         set ^BG.RetentionTests("passed")=0
         do ##class(BG.RetentionTests.Fixture).Seed()
@@ -68,8 +69,7 @@ ClassMethod Run() As %Status
         do rs.%Next()
         do ..Assert(rs.%Get("N")=8,"Previews leave every header intact")
         do ..Assert(##class(BG.RetentionTests.Message).%ExistsId(^BG.RetentionTests("bodyA")),"Previews leave bodies intact")
-        set h=##class(BG.Retention.Service).History(target)
-        do ..Assert(h.%Size()=11,"Committed policy saves and completed previews are audited")
+        do ..Assert(..AuditCount()=auditBefore+11,"Committed policy saves and completed previews are audited")
         set contribution="BG.Retention.Portal.Contribution"
         set sc=##class(Portal.Ext.Registry).SetEnabled(contribution,0)
         $$$ThrowOnError(sc)
@@ -95,5 +95,13 @@ ClassMethod Run() As %Status
         write $system.Status.GetErrorText(ex.AsStatus()),!
         return ex.AsStatus()
     }
+}
+
+ClassMethod AuditCount() As %Integer
+{
+    set rs=##class(%SQL.Statement).%ExecDirect(,"SELECT COUNT(*) AS N FROM BG_Retention.Audit WHERE TargetNamespace=?",$namespace)
+    if rs.%SQLCODE<0 { throw ##class(%Exception.General).%New(rs.%Message) }
+    do rs.%Next()
+    return rs.%Get("N")
 }
 }

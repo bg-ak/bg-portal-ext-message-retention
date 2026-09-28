@@ -1,20 +1,42 @@
-# Demo guide
+# Demo: different messages, different lifetimes
 
-Install the extension first using the root [README](../README.md). Use a disposable
-IRIS instance, an empty `Ens.MessageHeader` store, and no retention policies in the
-target namespace. Synthetic data must not be mixed with a real production.
-
-## Docker
+Install the extension using the root [README](../README.md). Use a disposable IRIS
+instance with no existing message headers or retention policies. No real vehicle,
+customer or financial information is used in this demonstration.
 
 ```sh
 sh demo/seed.sh YOUR_PORTAL_CONTAINER --disposable
 ```
 
-The optional final argument selects another namespace. Its interoperability classes
-and the retention service must be available there. The ordinary installation does
-not import any `BG.RetentionDemo` or `BG.RetentionTests` classes.
+The optional final argument selects the namespace hosting Portal. The command
+loads the optional demo classes and contribution, then creates nine synthetic
+bodies, their real IRIS headers, and three policies. Reload the retention page.
+Ordinary ZPM installation does not import demo or test classes.
 
-## IRIS terminal
+## What the visitor sees
+
+| Type | Message ages at seeding | Saved rule | Initial result |
+| --- | --- | --- | --- |
+| Accounting documents | 400, 30 and 2 days | Keep indefinitely | Keep all three, including the oldest invoice |
+| Tow-truck GPS positions | 10 minutes, 2 hours, 6 hours | 1 hour | Keep the recent position; two are past retention |
+| Towing status updates | 2, 60 and 400 days | 50 days | Keep the recent job update; two are past retention |
+
+The policies show a name, exact body class and business reason. The demo table
+shows actual synthetic contents: invoice numbers and amounts, vehicle coordinates,
+and job status descriptions. Each row includes age, retention and result.
+
+For an interactive example, edit **Tow-truck GPS positions**, change **Hours** to
+**3**, and preview. Only the 6-hour position now matches. Save the change, then click
+**Refresh saved policies** in the demo table: the 2-hour position becomes **Within
+retention**. The result comes from saved policy data and message timestamps, not
+from hard-coded colored rows. Restore 1 hour to return to the initial scenario.
+
+Messages age in real time. After 50 minutes, the initially recent GPS position will
+also be over an hour old. Refresh to recalculate. No messages are deleted, including
+those shown as **Past retention**; that label reports age, not cleanup safety.
+The normal preview continues to flag session and shared-body constraints.
+
+## Server installation without Docker
 
 Copy the checkout to the server, select the namespace hosting Portal and run as
 an administrator:
@@ -27,40 +49,36 @@ set sc=##class(BG.RetentionDemo.Seed).Run("DISPOSABLE DEMO")
 write $system.Status.GetErrorText(sc),!
 ```
 
-Success prints `RETENTION DEMO SEEDED: 19 headers, 4 policies in ...`.
-The seed checks its preconditions before creating data and uses a transaction.
-It refuses to overwrite policies or reseed an occupied namespace.
+Success prints `RETENTION DEMO SEEDED: 9 messages, 3 policies in ...`.
+The seed refuses an occupied store, existing policies and repeated runs. Its data
+and policies commit together. It does not create users or run a production.
 
-## Visitor walkthrough
+## How the examples remain separate
 
-In Portal open **Interoperability → Message retention**. Four policies are already
-visible. Start with Order / 50 days: three headers match, two have incomplete or
-unknown sessions, and one shares its body with another header outside the age
-window. Switching the unsaved rule to 1 or 365 days changes the count to 4 or 1.
+`BG.RetentionDemo.Contribution` adds a widget to the retention extension's
+`examples` slot. `Dataset` reads only recorded demo header IDs and three explicitly
+allowed synthetic body classes. Production analysis in `BG.Retention.Source`
+continues to read headers only. When the main page selects another namespace,
+the widget prompts the visitor to return to the installation's demo namespace.
 
-This explains the domain distinction: retention intent can be class-specific,
-but message relationships cross class and age boundaries. A preview does not
-authorize deletion. The page deliberately offers no cleanup button.
+Portal's Extensions screen shows the retention extension and the optional demo
+contribution. Disabling the retention extension hides its navigation and dashboard
+widget and blocks its page/API. Re-enabling it preserves policies and history.
+Disabling the demo contribution removes the example table alone.
 
-The Archive policy records “never”. Its class also has `ENSPURGE=0`, allowing the
-page to explain that the IRIS parameter protects bodies, not their message headers.
+## Hosting, upgrades and resets
 
-To demonstrate the extension architecture, open Portal's **Extensions** page,
-disable **Production Message Retention**, and reload. Its navigation and widget
-disappear, and direct page/API access is denied. Re-enable it: the policies and
-history remain. The Portal core and frontend have not been rebuilt.
+Keep the host's existing authentication. This repository changes no users,
+passwords, CSP applications or public resource grants. Use the existing demo
+administrator or grant the normal [retention permissions](../docs/OPERATIONS.md#access)
+to the intended role. The synthetic bodies share the demo namespace's database
+access; no permission to read arbitrary production bodies is added.
 
-## Hosting and resets
+On a host that rebuilds its demo periodically, run the extension installation and
+explicit demo seed during setup, after Portal is installed and before visitors
+enter. The extension has no automatic seed hook.
 
-Use your existing Portal demo authentication. This repository does not change
-users, passwords, CSP applications or public resource grants. For a restricted
-demo account, follow [Access](../docs/OPERATIONS.md#access).
-
-If the host rebuilds the demo periodically, include the package load and explicit
-seed call in that host's setup sequence, **after** Portal is installed and before
-visitors enter. There is no automatic seed hook in the extension.
-
-For a clean reset, recreate the disposable instance and rerun installation/seed.
-There is deliberately no script that deletes an existing message store. Disabling
-or uninstalling the extension does not remove demo headers, policies or history.
-Never use a broad purge command merely to reset this demonstration.
+Version 0.2.0 replaces the original generic demonstration with these business
+messages. The seed does not rewrite an already populated 0.1.0 demo. Start a fresh
+disposable instance for a reset or demo upgrade. Uninstalling the extension does
+not remove headers, policies or history; no broad purge/reset script is provided.
